@@ -6,6 +6,20 @@ CONF_NAME = "VIS 2026"
 CONF_DATE = "November 9, 2026"
 DEADLINE_TIME = "11:59pm (23:59) Anywhere on Earth (AoE)"
 
+# aka the program chair committee
+ALL_CHAIRS = [
+    {"name": "Alfie Abdul-Rahman", "email": "alfie.abdulrahman@kcl.ac.uk"},
+    {"name": "Tushar Athawale", "email": "tushar.athawale@gmail.com"},
+    {"name": "John Thompson", "email": "john.thompson@autodesk.com"},
+]
+
+# the publication chair committee
+ALL_PUBCHAIRS = [
+    {"name": "Minsuk Kahng", "email": "minsuk.kahng@gmail.com"},
+    {"name": "Devin Lange", "email": "devinscottlange@gmail.com"},
+    {"name": "Sungahn Ko", "email": "sungahn@postech.ac.kr"},
+]
+
 
 def writerow(writer, row):
     while len(row) < 3:
@@ -27,6 +41,18 @@ def convert(args):
             writer = csv.writer(outfile)
 
             writerow(writer, ["conference", CONF_NAME])
+            writerow(writer, [])
+
+            for chair in ALL_CHAIRS:
+                writerow(writer, ["all chair", chair["name"], chair["email"]])
+
+            for pubchair in ALL_PUBCHAIRS:
+                writerow(writer, ["pubchair", pubchair["name"], pubchair["email"]])
+
+            writerow(writer, ["all conference date", CONF_DATE])
+            writerow(writer, ["all primary", "Primary Reviewer"])
+            writerow(writer, ["all secondary", "Secondary Reviewer"])
+            writerow(writer, ["all reviewer", "Reviewer"])
 
             for row in reader:
                 writerow(writer, [])
