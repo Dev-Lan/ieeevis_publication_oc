@@ -5,18 +5,19 @@ from datetime import datetime
 CONF_NAME = "VIS 2026"
 CONF_DATE = "November 9, 2026"
 DEADLINE_TIME = "11:59pm (23:59) Anywhere on Earth (AoE)"
+CONF_URL = "https://ieeevis.org/year/2026/welcome"
 
 # aka the program chair committee
 ALL_CHAIRS = [
-    {"name": "Alfie Abdul-Rahman", "email": "alfie.abdulrahman@kcl.ac.uk"},
+    {"name": "Alfie Abdul-Rahman", "email": "alfie.abdulrahman@gmail.com"},
     {"name": "Tushar Athawale", "email": "tushar.athawale@gmail.com"},
-    {"name": "John Thompson", "email": "john.thompson@autodesk.com"},
+    {"name": "John Thompson", "email": "john.roger.thompson@gmail.com"},
 ]
 
 # the publication chair committee
 ALL_PUBCHAIRS = [
     {"name": "Minsuk Kahng", "email": "minsuk.kahng@gmail.com"},
-    {"name": "Devin Lange", "email": "devinscottlange@gmail.com"},
+    {"name": "Devin Lange", "email": "devin@sci.utah.edu"},
     {"name": "Sungahn Ko", "email": "sungahn@postech.ac.kr"},
 ]
 
@@ -43,11 +44,12 @@ def convert(args):
             writerow(writer, ["conference", CONF_NAME])
             writerow(writer, [])
 
+            writerow(writer, ["all url", CONF_URL])
             for chair in ALL_CHAIRS:
                 writerow(writer, ["all chair", chair["name"], chair["email"]])
 
             for pubchair in ALL_PUBCHAIRS:
-                writerow(writer, ["pubchair", pubchair["name"], pubchair["email"]])
+                writerow(writer, ["all pubchair", pubchair["name"], pubchair["email"]])
 
             writerow(writer, ["all conference date", CONF_DATE])
             writerow(writer, ["all primary", "Primary Reviewer"])
