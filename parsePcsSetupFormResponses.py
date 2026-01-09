@@ -62,13 +62,14 @@ def convert(args):
                 writerow(
                     writer, ["track name", row["Track name (e.g., VDS, Vis4DH, etc.)"]]
                 )
-                writerow(
-                    writer,
-                    [
-                        "url",
-                        row["Track URL (e.g., http://ieeevis.org/year/2021/welcome)"],
-                    ],
-                )
+                track_url = row[
+                    "Track URL (e.g., http://ieeevis.org/year/2021/welcome)"
+                ]
+                if track_url:
+                    writerow(
+                        writer,
+                        ["url", track_url],
+                    )
 
                 chair_names = row[
                     "Chair Names (comma-separated, e.g., Jon Snow, Arya Stark)"
