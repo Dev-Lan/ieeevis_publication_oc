@@ -265,3 +265,62 @@ this in plain language from Claude Code.
 | `--only-complete` | off | Skip papers whose PCS status is not `complete`. |
 | `--repair-escapes` | off | Read an export whose backslashes are not valid JSON escapes by doubling them. |
 | `--sheet-name NAME` | `Contacts` | Worksheet name for `.xlsx` output. |
+
+## ./exportEventTable.py
+
+The event-level companion to `exportContactList.py`: one row per event rather
+than one row per paper, for the camera-ready records table.
+
+```
+Event,Record Number,Event Type,Paper Count,PDF and Supplemental Files Dropbox Link
+Full Papers,,Full Paper,145,
+Short Papers,,Short Paper,68,
+VISions,,,2,
+BELIV,,,13,
+```
+
+`Event` is the folder name and `Paper Count` is the number of records in that
+event's metadata export; those two are the only derived columns. `Record Number`
+and the Dropbox link are always empty — nothing in the PCS exports supplies
+them, so they are filled in by hand after the fact.
+
+It shares the export discovery with `exportContactList.py` and the writers with
+`parseCameraReadyMetadata.py`, so all three must stay importable from the repo
+root. Standard library only.
+
+1. Run it with no paths to do every event:
+
+```sh
+# every event under data/, with a total row, to out/events.csv
+python exportEventTable.py --total
+
+# just the associated events, biggest first
+python exportEventTable.py "data/VIS26 Data Associated Events" --sort count -o out/workshops.csv
+```
+
+Paths, discovery, and the `out/` default work exactly as in
+`exportContactList.py` above: no year or folder name is baked into the default,
+and the output folder is created if missing.
+
+2. Fill in `Event Type` for the associated events. Only the two paper tracks are
+   filled automatically: a folder named like "Full Papers" or "Short Papers"
+   gets `Full Paper` or `Short Paper`, and every other row is left blank.
+   Whether an associated event is a workshop, a contest, an arts program, or a
+   symposium is not something the folder names record, so the script does not
+   guess at it — a wrong label that looks right is worse than an empty cell.
+   The script prints which columns it left blank at the end of each run.
+
+There is also an `export-event-table` skill in `.claude/skills/` for invoking
+this in plain language from Claude Code.
+
+### Options
+
+| option | default | what it does |
+| --- | --- | --- |
+| `-o`, `--output PATH` | `out/events.csv` | Output file; a `.csv` or `.xlsx` extension selects the format. |
+| `--format {auto,csv,xlsx,both}` | `auto` | Output format. `auto` reads it from the output file extension; `both` writes a `.csv` and an `.xlsx`. |
+| `--sort {tree,event,count}` | `tree` | Row order. `tree` follows the folder tree; `event` sorts by name; `count` sorts by paper count, largest first. |
+| `--total` | off | Append a `Total` row summing the paper counts. |
+| `--only-complete` | off | Count only papers whose PCS status is `complete`. |
+| `--repair-escapes` | off | Read an export whose backslashes are not valid JSON escapes by doubling them. |
+| `--sheet-name NAME` | `Events` | Worksheet name for `.xlsx` output. |
