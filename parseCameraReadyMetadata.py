@@ -192,9 +192,57 @@ def build_row(paper, header, sequence, args):
     return [row[column] for column in header]
 
 
-def load_papers(path, only_complete):
+# The escape characters JSON allows after a backslash.
+VALID_ESCAPES = '"\\/bfnrtu'
+
+
+def repair_escapes(text):
+    """Double backslashes that JSON would reject as invalid escapes.
+
+    PCS copies abstracts through verbatim, so an author who writes LaTeX
+    (``\\emph{...}``, ``\\&``) or a Unicode code point (``\\U00000431``) leaves a
+    lone backslash in the export, which is not legal JSON. Each one is text the
+    author meant literally, so doubling it preserves the character. Returns the
+    repaired text and the number of escapes fixed.
+    """
+    out = []
+    fixed = 0
+    index = 0
+    while index < len(text):
+        character = text[index]
+        if character != "\\":
+            out.append(character)
+            index += 1
+            continue
+        following = text[index + 1] if index + 1 < len(text) else ""
+        if following in VALID_ESCAPES:
+            # A valid escape: copy the pair through untouched.
+            out.append(text[index:index + 2])
+            index += 2
+            continue
+        out.append("\\\\")
+        fixed += 1
+        index += 1
+    return "".join(out), fixed
+
+
+def load_papers(path, only_complete, repair=False):
     with open(path, "r", encoding="utf-8") as infile:
-        papers = json.load(infile)
+        text = infile.read()
+
+    try:
+        papers = json.loads(text)
+    except json.JSONDecodeError as error:
+        if not repair:
+            raise SystemExit(
+                f"{path}: {error}\n"
+                "The export contains a backslash that is not a valid JSON escape, "
+                "usually LaTeX an author typed into a title or abstract. "
+                "Re-run with --repair-escapes to read it anyway."
+            )
+        text, fixed = repair_escapes(text)
+        papers = json.loads(text)
+        print(f"repaired {fixed} invalid escape(s) in {path}")
 
     if not isinstance(papers, list):
         raise SystemExit(f"{path}: expected a JSON list of papers")
@@ -470,6 +518,14 @@ def main():
         help="Skip papers whose PCS status is not 'complete'",
     )
     parser.add_argument(
+        "--repair-escapes",
+        action="store_true",
+        help=(
+            "Read an export whose backslashes are not valid JSON escapes "
+            "(LaTeX typed into a title or abstract) by doubling them"
+        ),
+    )
+    parser.add_argument(
         "--sheet-name",
         default="Metadata",
         help="Worksheet name for xlsx output (default: Metadata)",
@@ -477,7 +533,7 @@ def main():
     args = parser.parse_args()
 
     targets = output_paths(args.output, args.format)
-    papers = load_papers(args.input, args.only_complete)
+    papers = load_papers(args.input, args.only_complete, args.repair_escapes)
     header, rows = convert(papers, args)
 
     for path, output_format in targets:

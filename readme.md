@@ -53,6 +53,16 @@ python parseCameraReadyMetadata.py "VIS26 Data/Short Papers/vis26d_camera.json" 
    `complete` are flagged but still included; pass `--only-complete` to drop
    them).
 
+If the script stops with a JSON decode error, the export contains a backslash
+that is not a valid JSON escape — PCS copies author text through verbatim, so
+LaTeX in an abstract (`\emph{...}`, `\&`) or a Unicode code point
+(`\U00000431`) breaks the file. Re-run with `--repair-escapes` to double those
+backslashes and read it anyway; the script prints how many it repaired. The real
+fix belongs upstream in PCS.
+
+There is also a `parse-camera-ready-metadata` skill in `.claude/skills/` for
+invoking this in plain language from Claude Code.
+
 3. Share the output file with the contact at IEEE CPS.
 
 ### Options
@@ -69,6 +79,7 @@ python parseCameraReadyMetadata.py "VIS26 Data/Short Papers/vis26d_camera.json" 
 | `--no-sequence` | off | Leave the `Sequence` column blank, which drops it. |
 | `--no-pdf-file-name` | off | Leave `Article Pdf File Name` blank instead of deriving it from the PCS document URL. |
 | `--only-complete` | off | Skip papers whose PCS status is not `complete`. |
+| `--repair-escapes` | off | Read an export whose backslashes are not valid JSON escapes (LaTeX typed into a title or abstract) by doubling them. |
 | `--sheet-name NAME` | `Metadata` | Worksheet name for `.xlsx` output. |
 
 ### Notes on the mapping
@@ -86,3 +97,106 @@ python parseCameraReadyMetadata.py "VIS26 Data/Short Papers/vis26d_camera.json" 
 - `Submitter Name` / `Submitter Email` come from the PCS contact author, so
   unlike PCS's own "ACM Author Emails, excluding contact email" field, the
   contact author's email does appear in their `Author Email N` column.
+
+## ./pruneCameraReadySubmissions.py
+
+Removes submissions from a PCS camera-ready export folder — the ones an
+associated event did not accept for publication. Deletes them from
+`vis26_camera.json` and from `vis26_camera_archive/subs/<paper id>/`, and leaves
+the archive's `index.html` files alone so the pruned submissions stay in the
+listing. Standard library only.
+
+1. Run the script against the event folder (the one holding `vis26_camera.json`
+   and `vis26_camera_archive/`), with either an include or an exclude list:
+
+```sh
+# drop two submissions
+python pruneCameraReadySubmissions.py "VIS26 Data Associated Events/Uncertainty Vis" --exclude 1017 1003
+
+# keep only the accepted papers, listed one ID per line in a file
+python pruneCameraReadySubmissions.py "VIS26 Data Associated Events/BELIV" --include @accepted.txt
+```
+
+Exactly one of `--include` (keep only these paper IDs) or `--exclude` (drop
+these paper IDs) is required. Both take IDs as `1001 1003`, `1001,1003`, or
+`@path/to/ids.txt` — one ID per line, with `#` comments and any text after the
+ID ignored, so a copy-pasted "ID  Title" list works.
+
+2. Add `-n` for a dry run first. The script prints the IDs it would prune, warns
+   about IDs found in neither the metadata nor `subs/`, and refuses to run if the
+   selection would remove everything.
+
+Deletion is irreversible: the metadata is backed up to `vis26_camera.json.bak`
+(pass `--no-backup` to skip), and `--move-to DIR` moves the pruned submission
+folders aside instead of deleting them.
+
+There is also a `prune-submissions` skill in `.claude/skills/`, so in Claude Code
+this can be asked for in plain language ("remove 1017 and 1003 from Uncertainty
+Vis").
+
+### Options
+
+| option | default | what it does |
+| --- | --- | --- |
+| `--include ID [ID ...]` | — | Keep only these paper IDs; everything else is removed. |
+| `--exclude ID [ID ...]` | — | Remove these paper IDs and keep the rest. |
+| `--json PATH` | `<folder>/vis26_camera.json` | Path to the metadata JSON. |
+| `--subs PATH` | `<folder>/vis26_camera_archive/subs` | Path to the submissions directory. |
+| `--move-to DIR` | off | Move pruned submission folders here instead of deleting them. |
+| `--no-backup` | off | Skip the `vis26_camera.json.bak` copy. |
+| `-n`, `--dry-run` | off | Report what would be removed and change nothing. |
+
+## ./renameCameraReadyFiles.py
+
+PCS names every camera-ready export `vis26_camera.json`, so the associated event
+folders all look alike and the files are ambiguous once moved out of their
+folder. This renames them to the per-track convention that Full Papers and Short
+Papers already use:
+
+```
+Full Papers/vis26_full_papers_metadata.json
+Uncertainty Vis/vis26_uncertainty_vis_metadata.json
+Uncertainty Vis/vis26_uncertainty_vis_camera_archive.zip
+```
+
+The slug comes from the folder name — lowercased, with runs of non-alphanumeric
+characters collapsed to `_`, so "Bio+MedVis Challenge" becomes
+`bio_medvis_challenge`. The conference prefix (`vis26`) is kept from the existing
+file name; the per-track letter PCS sometimes appends to it (`vis26c_camera.json`,
+`vis26o_camera.json`) is dropped, since the slug already names the track — which
+is how `vis26_full_papers_metadata.json` is named. Files whose names the script
+does not recognize are reported and left alone. Standard library only.
+
+1. Point it at a parent folder to do every track at once, or at a single track
+   folder. Add `-n` for a dry run first:
+
+```sh
+# every event folder under the parent
+python renameCameraReadyFiles.py "VIS26 Data Associated Events" -n
+
+# one folder
+python renameCameraReadyFiles.py "VIS26 Data Associated Events/Uncertainty Vis"
+```
+
+Both the metadata files (`.json`, `.csv`, `.xlsx`) and the camera archive zips
+are renamed, so `vis26_camera_archive.zip` becomes
+`vis26_uncertainty_vis_camera_archive.zip` and a `_part_01` suffix is kept where
+PCS split the archive. Pass `--keep-archive-names` to leave the zips at their PCS
+names, which is what Full Papers and Short Papers do. The extracted
+`vis26_camera_archive/` directory and its contents are never touched.
+
+Re-running is a no-op, and a rename that would overwrite an existing file is
+skipped with a message instead. `pruneCameraReadySubmissions.py` accepts either
+the PCS name or the renamed one, so the two scripts can be run in either order.
+
+There is also a `rename-camera-ready-files` skill in `.claude/skills/` for
+invoking this in plain language from Claude Code.
+
+### Options
+
+| option | default | what it does |
+| --- | --- | --- |
+| `--slug NAME` | derived from the folder name | File-name slug to use instead. Only valid for a single track folder. |
+| `--prefix VALUE` | kept from the existing file name | Conference prefix for the new names (e.g. `vis27`). |
+| `--keep-archive-names` | off | Leave the camera archive zips at their PCS names. |
+| `-n`, `--dry-run` | off | Report the renames and change nothing. |

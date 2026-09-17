@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+# common Camera-ready data processing folders
+/archive/
+/data/
+/temp/
+/out/
