@@ -200,3 +200,68 @@ invoking this in plain language from Claude Code.
 | `--prefix VALUE` | kept from the existing file name | Conference prefix for the new names (e.g. `vis27`). |
 | `--keep-archive-names` | off | Leave the camera archive zips at their PCS names. |
 | `-n`, `--dry-run` | off | Report the renames and change nothing. |
+
+## ./exportContactList.py
+
+Builds one compact contact list across every track — full papers, short papers,
+VISions, and the associated events — from the PCS camera-ready metadata
+exports. Five columns, one row per paper:
+
+```
+Event,Paper ID,Title,Contact Name,Contact Email
+Full Papers,1004,NEXO: Adaptive Visualization for Comparative Exploration...,Reza Shahriari,reza.sh44@gmail.com
+BELIV,1002,...,...,...
+```
+
+`Event` is the folder name, so it reads as "Full Papers", "BELIV",
+"Bio+MedVis Challenge". This is the cross-track companion to
+`parseCameraReadyMetadata.py`: that script makes the full CPS spreadsheet for
+one track, this one makes a roll-up for chasing down contact authors. It shares
+that script's parsing and its CSV/XLSX writers, so both must stay importable
+from the repo root. Standard library only.
+
+1. Run it with no paths to do the whole conference:
+
+```sh
+# every track under data/, to out/contacts.csv
+python exportContactList.py
+
+# just the associated events, as a mailing list (one row per email)
+python exportContactList.py "data/VIS26 Data Associated Events" -o out/workshops.csv --unique-contacts
+```
+
+With no paths it reads `data/`, the working folder this repo keeps camera-ready
+exports in — no year or folder name is baked into the default, so it keeps
+working as the contents change from one conference to the next. A path can also
+be a single event folder or a single metadata file.
+
+Inputs are `*_metadata.json` (the renamed convention) or `*_camera.json` (the
+raw PCS name), found at any depth below the path, so a parent, a year folder,
+and an event folder all work. Extracted `*_camera_archive/` trees are skipped
+and folders holding no export are passed over. `Event` is the name of the folder
+each export sits in.
+
+Output defaults to `out/contacts.csv`, and the folder is created if missing.
+Keep outputs in `out/`, `data/`, or `temp/`: this repo holds the processing
+scripts, not the data, which is why those folders are gitignored.
+
+2. Check the output. Per-event paper counts are printed as it goes, and papers
+   with no contact email are warned about. An export that cannot be read is
+   reported and skipped so one bad file does not hide the other tracks — the run
+   still exits nonzero at the end. A JSON decode error is the same bad-escape
+   problem described above; re-run with `--repair-escapes`.
+
+There is also an `export-contact-list` skill in `.claude/skills/` for invoking
+this in plain language from Claude Code.
+
+### Options
+
+| option | default | what it does |
+| --- | --- | --- |
+| `-o`, `--output PATH` | `out/contacts.csv` | Output file; a `.csv` or `.xlsx` extension selects the format. |
+| `--format {auto,csv,xlsx,both}` | `auto` | Output format. `auto` reads it from the output file extension; `both` writes a `.csv` and an `.xlsx`. |
+| `--sort {tree,event,name}` | `tree` | Row order. `tree` follows the folder tree (path order, folders alphabetically at each level, papers by ID); `event` sorts events alphabetically regardless of path; `name` sorts by contact name. |
+| `--unique-contacts` | off | Keep only the first row for each contact email, for a mailing list. |
+| `--only-complete` | off | Skip papers whose PCS status is not `complete`. |
+| `--repair-escapes` | off | Read an export whose backslashes are not valid JSON escapes by doubling them. |
+| `--sheet-name NAME` | `Contacts` | Worksheet name for `.xlsx` output. |
